@@ -1,6 +1,28 @@
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const { createCanvas } = require('@napi-rs/canvas');
+const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
+const https = require('https');
 const fs = require('fs');
+const path = require('path');
+
+async function downloadFont(url, dest) {
+  return new Promise((resolve, reject) => {
+    if (fs.existsSync(dest)) return resolve();
+    const file = fs.createWriteStream(dest);
+    https.get(url, res => {
+      res.pipe(file);
+      file.on('finish', () => { file.close(); resolve(); });
+    }).on('error', reject);
+  });
+}
+
+async function loadFonts() {
+  const fontPath = path.join('/tmp', 'SpaceMono.ttf');
+  await downloadFont('https://github.com/google/fonts/raw/main/ofl/spacemono/SpaceMono-Regular.ttf', fontPath);
+  GlobalFonts.registerFromPath(fontPath, 'SpaceMono');
+  const fontBoldPath = path.join('/tmp', 'SpaceMonoBold.ttf');
+  await downloadFont('https://github.com/google/fonts/raw/main/ofl/spacemono/SpaceMono-Bold.ttf', fontBoldPath);
+  GlobalFonts.registerFromPath(fontBoldPath, 'SpaceMono');
+}
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const TOKEN     = process.env.TOKEN     || 'VOTRE_TOKEN_ICI';
@@ -91,12 +113,12 @@ function drawBadge(ctx, x, y, l1, l2) {
   fillRR(ctx, x, y, 130, 44, 4, C.blue);
   ctx.save(); ctx.strokeStyle = C.cream; ctx.lineWidth = 2;
   roundRect(ctx, x, y, 130, 44, 4); ctx.stroke();
-  ctx.fillStyle = C.bg; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = C.bg; ctx.font = 'bold 11px SpaceMono'; ctx.textAlign = 'center';
   ctx.fillText(l1, x+65, y+16); ctx.fillText(l2, x+65, y+32);
   ctx.restore();
 }
 function drawStamp(ctx, x, y, text) {
-  ctx.save(); ctx.font = 'bold 11px sans-serif';
+  ctx.save(); ctx.font = 'bold 11px SpaceMono';
   const tw = ctx.measureText(text).width + 24;
   ctx.strokeStyle = C.yellow; ctx.lineWidth = 1.5;
   roundRect(ctx, x-tw, y, tw, 28, 4); ctx.stroke();
@@ -121,7 +143,7 @@ function drawBar(ctx, x, y, w, h, pct) {
 function drawSectionLbl(ctx, x, y, text) {
   ctx.save();
   fillRR(ctx, x, y-8, 10, 10, 2, 'rgba(163,202,245,0.5)');
-  ctx.fillStyle = C.blue; ctx.globalAlpha=0.8; ctx.font='10px sans-serif';
+  ctx.fillStyle = C.blue; ctx.globalAlpha=0.8; ctx.font='10px SpaceMono';
   ctx.fillText(text, x+18, y); ctx.restore();
 }
 function drawDot(ctx, role, cx, cy, size) {
@@ -145,9 +167,9 @@ async function drawProfileCard(member, xp) {
 
   // Header
   ctx.fillStyle = C.yellow; ctx.fillRect(0, 0, W, 48);
-  ctx.fillStyle = C.bg; ctx.font = 'bold 11px sans-serif'; ctx.textAlign='left';
+  ctx.fillStyle = C.bg; ctx.font = 'bold 11px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('>>>  DOSSIER RH OFFICIEL  —  LES IRRECUPERABLES', pad, 30);
-  ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px sans-serif'; ctx.textAlign='right';
+  ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px SpaceMono'; ctx.textAlign='right';
   ctx.fillText('Ref. EMP-'+String(xp).padStart(4,'0'), W-pad, 30); ctx.restore();
 
   const role     = getRoleForXp(xp);
@@ -160,14 +182,14 @@ async function drawProfileCard(member, xp) {
   fillRR(ctx, pad, 68, 56, 56, 8, C.blue);
   ctx.save(); ctx.strokeStyle=C.yellow; ctx.lineWidth=2;
   roundRect(ctx, pad, 68, 56, 56, 8); ctx.stroke();
-  ctx.fillStyle=C.bg; ctx.font='bold 22px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=C.bg; ctx.font='bold 22px SpaceMono'; ctx.textAlign='center';
   ctx.fillText(member.displayName[0].toUpperCase(), pad+28, 104); ctx.restore();
 
   // Nom + rôle
-  ctx.fillStyle=C.cream; ctx.font='bold 20px sans-serif'; ctx.textAlign='left';
+  ctx.fillStyle=C.cream; ctx.font='bold 20px SpaceMono'; ctx.textAlign='left';
   ctx.fillText(member.displayName, pad+70, 90);
   drawDot(ctx, role, pad+76, 107, 10);
-  ctx.fillStyle=C.yellow; ctx.font='bold 12px sans-serif';
+  ctx.fillStyle=C.yellow; ctx.font='bold 12px SpaceMono';
   ctx.fillText(role.name, pad+86, 111);
 
   drawBadge(ctx, W-pad-130, 68, 'FICHE', 'EMPLOYE');
@@ -180,11 +202,11 @@ async function drawProfileCard(member, xp) {
 
   // Échelon
   drawStatBox(ctx, pad, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px sans-serif'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('ECHELON', pad+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px sans-serif';
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
   ctx.fillText(String(role.level), pad+sbW/2, sbY+50);
-  ctx.globalAlpha=0.5; ctx.fillStyle=C.cream; ctx.font='10px sans-serif';
+  ctx.globalAlpha=0.5; ctx.fillStyle=C.cream; ctx.font='10px SpaceMono';
   const rlw = ctx.measureText(role.name).width;
   drawDot(ctx, role, pad+sbW/2 - rlw/2 - 8, sbY+68, 7);
   ctx.textAlign='left';
@@ -193,9 +215,9 @@ async function drawProfileCard(member, xp) {
 
   // XP Total
   drawStatBox(ctx, pad+sbW+10, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px sans-serif'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('XP TOTAL', pad+sbW+10+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px sans-serif';
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
   ctx.fillText(xp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50);
   ctx.restore();
 
@@ -203,15 +225,15 @@ async function drawProfileCard(member, xp) {
   const allXp = Object.entries(xpData).sort((a,b)=>b[1].xp-a[1].xp);
   const rank = allXp.findIndex(([id])=>id===member.id)+1;
   drawStatBox(ctx, pad+(sbW+10)*2, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px sans-serif'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('CLASSEMENT', pad+(sbW+10)*2+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px sans-serif';
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
   ctx.fillText('#'+(rank||1), pad+(sbW+10)*2+sbW/2, sbY+50);
   ctx.restore();
 
   // Barre
   const barY=278;
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px sans-serif'; ctx.textAlign='left';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('Progression vers '+(nextRole?nextRole.name:'niveau max'), pad, barY);
   ctx.textAlign='right';
   ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY);
@@ -220,7 +242,7 @@ async function drawProfileCard(member, xp) {
 
   // Footer
   drawLine(ctx, pad, H-52, W-pad);
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px sans-serif'; ctx.textAlign='left';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('SIEGE SOCIAL DU CANAPE  —  SERVICE RH FICTIF', pad, H-26); ctx.restore();
   drawStamp(ctx, W-pad, H-36, 'EMPLOYE');
 
@@ -237,37 +259,37 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
 
   // Header
   ctx.fillStyle=C.yellow; ctx.fillRect(0, 0, W, 48);
-  ctx.fillStyle=C.bg; ctx.font='bold 11px sans-serif'; ctx.textAlign='left';
+  ctx.fillStyle=C.bg; ctx.font='bold 11px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('***  PROMOTION OFFICIELLE  —  LES IRRECUPERABLES', pad, 30);
-  ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px sans-serif'; ctx.textAlign='right';
+  ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px SpaceMono'; ctx.textAlign='right';
   ctx.fillText('Ref. PROMO-'+String(newRole.level).padStart(4,'0'), W-pad, 30); ctx.restore();
 
   // Avatar
   fillRR(ctx, pad, 68, 56, 56, 8, C.blue);
   ctx.save(); ctx.strokeStyle=C.yellow; ctx.lineWidth=2;
   roundRect(ctx, pad, 68, 56, 56, 8); ctx.stroke();
-  ctx.fillStyle=C.bg; ctx.font='bold 22px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=C.bg; ctx.font='bold 22px SpaceMono'; ctx.textAlign='center';
   ctx.fillText(member.displayName[0].toUpperCase(), pad+28, 104); ctx.restore();
 
   // Nom
-  ctx.fillStyle=C.cream; ctx.font='bold 20px sans-serif'; ctx.textAlign='left';
+  ctx.fillStyle=C.cream; ctx.font='bold 20px SpaceMono'; ctx.textAlign='left';
   ctx.fillText(member.displayName, pad+70, 88);
 
   drawBadge(ctx, W-pad-130, 68, 'DOSSIER', 'RH OFFICIEL');
 
   // Description
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.75; ctx.font='12px sans-serif'; ctx.textAlign='left';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.75; ctx.font='12px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('Le Canape enregistre ton evolution...', pad+70, 108);
   ctx.fillText("Tu atteins l'echelon ", pad+70, 124);
   const p1 = ctx.measureText("Tu atteins l'echelon ").width; ctx.restore();
-  ctx.fillStyle=C.yellow; ctx.font='bold 12px sans-serif';
+  ctx.fillStyle=C.yellow; ctx.font='bold 12px SpaceMono';
   ctx.fillText(String(newRole.level), pad+70+p1, 124);
   const p2 = ctx.measureText(String(newRole.level)).width;
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.75; ctx.font='12px sans-serif';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.75; ctx.font='12px SpaceMono';
   ctx.fillText(' — ', pad+70+p1+p2, 124);
   const p3 = ctx.measureText(' — ').width; ctx.restore();
   drawDot(ctx, newRole, pad+70+p1+p2+p3+6, 120, 9);
-  ctx.fillStyle=C.blue; ctx.font='bold 12px sans-serif';
+  ctx.fillStyle=C.blue; ctx.font='bold 12px SpaceMono';
   ctx.fillText(short(newRole.name), pad+70+p1+p2+p3+14, 124);
 
   drawDash(ctx, pad, 148, W-pad);
@@ -282,7 +304,7 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
   // Ancien rôle
   ctx.save(); ctx.globalAlpha=0.5;
   drawDot(ctx, oldRole, midX-90, 208, 18);
-  ctx.fillStyle=C.cream; ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=C.cream; ctx.font='12px SpaceMono'; ctx.textAlign='center';
   ctx.fillText(short(oldRole.name), midX-90, 244);
   const ow = ctx.measureText(short(oldRole.name)).width;
   ctx.strokeStyle=C.cream; ctx.lineWidth=1;
@@ -290,31 +312,31 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
   ctx.restore();
 
   // Flèche
-  ctx.fillStyle=C.blue; ctx.font='20px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=C.blue; ctx.font='20px SpaceMonoBold'; ctx.textAlign='center';
   ctx.fillText('->', midX-10, 228);
 
   // Nouveau rôle
   drawDot(ctx, newRole, midX+80, 208, 22);
-  ctx.fillStyle=C.yellow; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=C.yellow; ctx.font='bold 13px SpaceMono'; ctx.textAlign='center';
   ctx.fillText(short(newRole.name), midX+80, 244);
 
   // Stats
   const sbW=(W-pad*2-10)/2, sbY=290, sbH=80;
 
   drawStatBox(ctx, pad, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px sans-serif'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('NOUVEL ECHELON', pad+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px sans-serif';
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
   ctx.fillText(String(newRole.level), pad+sbW/2, sbY+48);
-  ctx.globalAlpha=0.5; ctx.fillStyle=C.cream; ctx.font='8px sans-serif';
+  ctx.globalAlpha=0.5; ctx.fillStyle=C.cream; ctx.font='8px monospace';
   drawDot(ctx, newRole, pad+sbW/2-26, sbY+64, 7);
   ctx.fillText(short(newRole.name), pad+sbW/2+2, sbY+68);
   ctx.restore();
 
   drawStatBox(ctx, pad+sbW+10, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px sans-serif'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('XP TOTAL', pad+sbW+10+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px sans-serif';
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
   ctx.fillText(totalXp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50);
   ctx.restore();
 
@@ -323,7 +345,7 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
   const xpCur = Math.max(0, totalXp - newRole.xp);
   const xpNxt = nextRole ? nextRole.xp - newRole.xp : 1;
   const barY = 392;
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px sans-serif'; ctx.textAlign='left';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('Progression vers '+(nextRole?nextRole.name:'niveau max'), pad, barY);
   ctx.textAlign='right';
   ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY);
@@ -332,7 +354,7 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
 
   // Footer
   drawLine(ctx, pad, H-52, W-pad);
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px sans-serif'; ctx.textAlign='left';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('SIEGE SOCIAL DU CANAPE  —  SERVICE RH FICTIF', pad, H-26); ctx.restore();
   drawStamp(ctx, W-pad, H-36, 'PROMU');
 
@@ -343,10 +365,10 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
 async function handleLevelUp(member, channel, totalXp, oldRole, newRole) {
   const promo = member.guild.channels.cache.find(c => c.name === LEVELUP_CHANNEL) || channel;
 
-  const discordNew = member.guild.roles.cache.find(r => r.name === ROLE_NAMES_FULL[newRole.name]);
+  const discordNew = member.guild.roles.cache.find(r => r.name.includes(newRole.name));
   if (discordNew) await member.roles.add(discordNew).catch(console.error);
   if (oldRole.name !== newRole.name) {
-    const discordOld = member.guild.roles.cache.find(r => r.name === ROLE_NAMES_FULL[oldRole.name]);
+    const discordOld = member.guild.roles.cache.find(r => r.name.includes(oldRole.name));
     if (discordOld) await member.roles.remove(discordOld).catch(console.error);
   }
 
@@ -398,10 +420,10 @@ client.on('messageCreate', async (message) => {
   const u = getUser(uid);
   const oldRole = getRoleForXp(u.xp);
   u.xp += Math.floor(Math.random()*26)+15;
-  saveXp();
+  saveXp(); // ← AJOUT : sauvegarde après chaque gain XP
   const newRole = getRoleForXp(u.xp);
 
-  if (newRole.level > oldRole.level) {
+  if (newRole.level > oldRole.level) { // ← CORRECTION : comparaison par niveau
     const member = await message.guild.members.fetch(uid).catch(()=>null);
     if (member) await handleLevelUp(member, message.channel, u.xp, oldRole, newRole);
   }
@@ -421,10 +443,10 @@ client.on('messageReactionAdd', async (reaction, user) => {
   const u = getUser(user.id);
   const oldRole = getRoleForXp(u.xp);
   u.xp += Math.floor(Math.random()*3)+1;
-  saveXp();
+  saveXp(); // ← AJOUT : sauvegarde après chaque gain XP
   const newRole = getRoleForXp(u.xp);
 
-  if (newRole.level > oldRole.level) {
+  if (newRole.level > oldRole.level) { // ← CORRECTION : comparaison par niveau
     const member = await guild.members.fetch(user.id).catch(()=>null);
     if (member) await handleLevelUp(member, reaction.message.channel, u.xp, oldRole, newRole);
   }
@@ -468,4 +490,10 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-client.login(TOKEN);
+loadFonts().then(() => {
+  console.log('✅ Polices chargées.');
+  client.login(TOKEN);
+}).catch(err => {
+  console.error('Erreur chargement polices:', err);
+  client.login(TOKEN);
+});

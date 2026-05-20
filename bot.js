@@ -32,7 +32,7 @@ const LEVELUP_CHANNEL = '📦・service-des-promotions';
 // ─── COULEURS ─────────────────────────────────────────────────────────────────
 const C = { bg: '#522C1F', yellow: '#FFE48C', blue: '#A3CAF5', cream: '#FBF5E9' };
 
-// ─── ROLES — seuils XP ronds ──────────────────────────────────────────────────
+// ─── ROLES ────────────────────────────────────────────────────────────────────
 const ROLES = [
   { level: 1,  name: 'Stagiaire du Canape',                   emoji: '📦', color: '#4A90D9', xp: 0    },
   { level: 2,  name: 'Alternant du Chill',                    emoji: '🧃', color: '#57A64A', xp: 200  },
@@ -49,7 +49,6 @@ const ROLES = [
   { level: 30, name: 'PDG du Chill',                          emoji: '👑', color: '#FFD700', xp: 8200 },
 ];
 
-// Noms complets pour Discord (avec accents)
 const ROLE_NAMES_FULL = {
   'Stagiaire du Canape':         '📦 Stagiaire du Canapé',
   'Alternant du Chill':          '🧃 Alternant du Chill',
@@ -148,12 +147,9 @@ function drawSectionLbl(ctx, x, y, text) {
 }
 function drawDot(ctx, role, cx, cy, size) {
   ctx.save();
-  ctx.fillStyle = role.color;
-  ctx.globalAlpha = 1;
-  ctx.beginPath();
-  ctx.arc(cx, cy, size/2, 0, Math.PI*2);
-  ctx.fill();
-  ctx.restore();
+  ctx.fillStyle = role.color; ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, size/2, 0, Math.PI*2);
+  ctx.fill(); ctx.restore();
 }
 function short(name) { return name.length > 16 ? name.substring(0,15)+'...' : name; }
 
@@ -162,45 +158,32 @@ async function drawProfileCard(member, xp) {
   const W=560, H=420, pad=20;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
-
   fillRR(ctx, 0, 0, W, H, 10, C.bg);
-
-  // Header
   ctx.fillStyle = C.yellow; ctx.fillRect(0, 0, W, 48);
   ctx.fillStyle = C.bg; ctx.font = 'bold 11px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('>>>  DOSSIER RH OFFICIEL  —  LES IRRECUPERABLES', pad, 30);
   ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px SpaceMono'; ctx.textAlign='right';
   ctx.fillText('Ref. EMP-'+String(xp).padStart(4,'0'), W-pad, 30); ctx.restore();
-
-  const role     = getRoleForXp(xp);
+  const role = getRoleForXp(xp);
   const nextRole = getNextRole(xp);
-  const xpCur    = Math.max(0, xp - role.xp);
-  const xpNxt    = nextRole ? nextRole.xp - role.xp : 1;
-  const pct      = nextRole ? xpCur / xpNxt : 1;
-
-  // Avatar
+  const xpCur = Math.max(0, xp - role.xp);
+  const xpNxt = nextRole ? nextRole.xp - role.xp : 1;
+  const pct = nextRole ? xpCur / xpNxt : 1;
   fillRR(ctx, pad, 68, 56, 56, 8, C.blue);
   ctx.save(); ctx.strokeStyle=C.yellow; ctx.lineWidth=2;
   roundRect(ctx, pad, 68, 56, 56, 8); ctx.stroke();
   ctx.fillStyle=C.bg; ctx.font='bold 22px SpaceMono'; ctx.textAlign='center';
   ctx.fillText(member.displayName[0].toUpperCase(), pad+28, 104); ctx.restore();
-
-  // Nom + rôle
   ctx.fillStyle=C.cream; ctx.font='bold 20px SpaceMono'; ctx.textAlign='left';
   ctx.fillText(member.displayName, pad+70, 90);
   drawDot(ctx, role, pad+76, 107, 10);
   ctx.fillStyle=C.yellow; ctx.font='bold 12px SpaceMono';
   ctx.fillText(role.name, pad+86, 111);
-
   drawBadge(ctx, W-pad-130, 68, 'FICHE', 'EMPLOYE');
   drawDash(ctx, pad, 140, W-pad);
   drawSectionLbl(ctx, pad, 165, 'BILAN DE CARRIERE');
-
-  // Stats
   const sbW = (W-pad*2-20)/3;
   const sbY=175, sbH=90;
-
-  // Échelon
   drawStatBox(ctx, pad, sbY, sbW, sbH);
   ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('ECHELON', pad+sbW/2, sbY+18); ctx.globalAlpha=1;
@@ -210,42 +193,29 @@ async function drawProfileCard(member, xp) {
   const rlw = ctx.measureText(role.name).width;
   drawDot(ctx, role, pad+sbW/2 - rlw/2 - 8, sbY+68, 7);
   ctx.textAlign='left';
-  ctx.fillText(role.name, pad+sbW/2 - rlw/2 + 2, sbY+72);
-  ctx.restore();
-
-  // XP Total
+  ctx.fillText(role.name, pad+sbW/2 - rlw/2 + 2, sbY+72); ctx.restore();
   drawStatBox(ctx, pad+sbW+10, sbY, sbW, sbH);
   ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('XP TOTAL', pad+sbW+10+sbW/2, sbY+18); ctx.globalAlpha=1;
   ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
-  ctx.fillText(xp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50);
-  ctx.restore();
-
-  // Classement
+  ctx.fillText(xp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50); ctx.restore();
   const allXp = Object.entries(xpData).sort((a,b)=>b[1].xp-a[1].xp);
   const rank = allXp.findIndex(([id])=>id===member.id)+1;
   drawStatBox(ctx, pad+(sbW+10)*2, sbY, sbW, sbH);
   ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('CLASSEMENT', pad+(sbW+10)*2+sbW/2, sbY+18); ctx.globalAlpha=1;
   ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
-  ctx.fillText('#'+(rank||1), pad+(sbW+10)*2+sbW/2, sbY+50);
-  ctx.restore();
-
-  // Barre
+  ctx.fillText('#'+(rank||1), pad+(sbW+10)*2+sbW/2, sbY+50); ctx.restore();
   const barY=278;
   ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('Progression vers '+(nextRole?nextRole.name:'niveau max'), pad, barY);
   ctx.textAlign='right';
-  ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY);
-  ctx.restore();
+  ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY); ctx.restore();
   drawBar(ctx, pad, barY+8, W-pad*2, 6, pct);
-
-  // Footer
   drawLine(ctx, pad, H-52, W-pad);
   ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('SIEGE SOCIAL DU CANAPE  —  SERVICE RH FICTIF', pad, H-26); ctx.restore();
   drawStamp(ctx, W-pad, H-36, 'EMPLOYE');
-
   return canvas.toBuffer('image/png');
 }
 
@@ -254,30 +224,20 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
   const W=560, H=500, pad=20;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
-
   fillRR(ctx, 0, 0, W, H, 10, C.bg);
-
-  // Header
   ctx.fillStyle=C.yellow; ctx.fillRect(0, 0, W, 48);
   ctx.fillStyle=C.bg; ctx.font='bold 11px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('***  PROMOTION OFFICIELLE  —  LES IRRECUPERABLES', pad, 30);
   ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px SpaceMono'; ctx.textAlign='right';
   ctx.fillText('Ref. PROMO-'+String(newRole.level).padStart(4,'0'), W-pad, 30); ctx.restore();
-
-  // Avatar
   fillRR(ctx, pad, 68, 56, 56, 8, C.blue);
   ctx.save(); ctx.strokeStyle=C.yellow; ctx.lineWidth=2;
   roundRect(ctx, pad, 68, 56, 56, 8); ctx.stroke();
   ctx.fillStyle=C.bg; ctx.font='bold 22px SpaceMono'; ctx.textAlign='center';
   ctx.fillText(member.displayName[0].toUpperCase(), pad+28, 104); ctx.restore();
-
-  // Nom
   ctx.fillStyle=C.cream; ctx.font='bold 20px SpaceMono'; ctx.textAlign='left';
   ctx.fillText(member.displayName, pad+70, 88);
-
   drawBadge(ctx, W-pad-130, 68, 'DOSSIER', 'RH OFFICIEL');
-
-  // Description
   ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.75; ctx.font='12px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('Le Canape enregistre ton evolution...', pad+70, 108);
   ctx.fillText("Tu atteins l'echelon ", pad+70, 124);
@@ -291,38 +251,24 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
   drawDot(ctx, newRole, pad+70+p1+p2+p3+6, 120, 9);
   ctx.fillStyle=C.blue; ctx.font='bold 12px SpaceMono';
   ctx.fillText(short(newRole.name), pad+70+p1+p2+p3+14, 124);
-
   drawDash(ctx, pad, 148, W-pad);
-
-  // Box changement
   ctx.save(); ctx.fillStyle='rgba(163,202,245,0.08)'; ctx.strokeStyle='rgba(163,202,245,0.25)'; ctx.lineWidth=0.5;
   roundRect(ctx, pad, 158, W-pad*2, 115, 8); ctx.fill(); ctx.stroke(); ctx.restore();
   drawSectionLbl(ctx, pad+14, 180, 'CHANGEMENT DE GRADE OFFICIEL');
-
   const midX = W/2;
-
-  // Ancien rôle
   ctx.save(); ctx.globalAlpha=0.5;
   drawDot(ctx, oldRole, midX-90, 208, 18);
   ctx.fillStyle=C.cream; ctx.font='12px SpaceMono'; ctx.textAlign='center';
   ctx.fillText(short(oldRole.name), midX-90, 244);
   const ow = ctx.measureText(short(oldRole.name)).width;
   ctx.strokeStyle=C.cream; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(midX-90-ow/2,240); ctx.lineTo(midX-90+ow/2,240); ctx.stroke();
-  ctx.restore();
-
-  // Flèche
+  ctx.beginPath(); ctx.moveTo(midX-90-ow/2,240); ctx.lineTo(midX-90+ow/2,240); ctx.stroke(); ctx.restore();
   ctx.fillStyle=C.blue; ctx.font='20px SpaceMonoBold'; ctx.textAlign='center';
   ctx.fillText('->', midX-10, 228);
-
-  // Nouveau rôle
   drawDot(ctx, newRole, midX+80, 208, 22);
   ctx.fillStyle=C.yellow; ctx.font='bold 13px SpaceMono'; ctx.textAlign='center';
   ctx.fillText(short(newRole.name), midX+80, 244);
-
-  // Stats
   const sbW=(W-pad*2-10)/2, sbY=290, sbH=80;
-
   drawStatBox(ctx, pad, sbY, sbW, sbH);
   ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('NOUVEL ECHELON', pad+sbW/2, sbY+18); ctx.globalAlpha=1;
@@ -330,17 +276,12 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
   ctx.fillText(String(newRole.level), pad+sbW/2, sbY+48);
   ctx.globalAlpha=0.5; ctx.fillStyle=C.cream; ctx.font='8px monospace';
   drawDot(ctx, newRole, pad+sbW/2-26, sbY+64, 7);
-  ctx.fillText(short(newRole.name), pad+sbW/2+2, sbY+68);
-  ctx.restore();
-
+  ctx.fillText(short(newRole.name), pad+sbW/2+2, sbY+68); ctx.restore();
   drawStatBox(ctx, pad+sbW+10, sbY, sbW, sbH);
   ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
   ctx.fillText('XP TOTAL', pad+sbW+10+sbW/2, sbY+18); ctx.globalAlpha=1;
   ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
-  ctx.fillText(totalXp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50);
-  ctx.restore();
-
-  // Barre
+  ctx.fillText(totalXp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50); ctx.restore();
   const nextRole = getNextRole(totalXp);
   const xpCur = Math.max(0, totalXp - newRole.xp);
   const xpNxt = nextRole ? nextRole.xp - newRole.xp : 1;
@@ -348,30 +289,24 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
   ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('Progression vers '+(nextRole?nextRole.name:'niveau max'), pad, barY);
   ctx.textAlign='right';
-  ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY);
-  ctx.restore();
+  ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY); ctx.restore();
   drawBar(ctx, pad, barY+8, W-pad*2, 6, nextRole ? xpCur/xpNxt : 1);
-
-  // Footer
   drawLine(ctx, pad, H-52, W-pad);
   ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px SpaceMono'; ctx.textAlign='left';
   ctx.fillText('SIEGE SOCIAL DU CANAPE  —  SERVICE RH FICTIF', pad, H-26); ctx.restore();
   drawStamp(ctx, W-pad, H-36, 'PROMU');
-
   return canvas.toBuffer('image/png');
 }
 
 // ─── LEVEL UP ─────────────────────────────────────────────────────────────────
 async function handleLevelUp(member, channel, totalXp, oldRole, newRole) {
   const promo = member.guild.channels.cache.find(c => c.name === LEVELUP_CHANNEL) || channel;
-
   const discordNew = member.guild.roles.cache.find(r => r.name.includes(newRole.name));
   if (discordNew) await member.roles.add(discordNew).catch(console.error);
   if (oldRole.name !== newRole.name) {
     const discordOld = member.guild.roles.cache.find(r => r.name.includes(oldRole.name));
     if (discordOld) await member.roles.remove(discordOld).catch(console.error);
   }
-
   try {
     const img = await drawLevelUpCard(member, totalXp, oldRole, newRole);
     await promo.send({ files: [new AttachmentBuilder(img, { name: 'levelup.png' })] });
@@ -393,6 +328,10 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
   ],
 });
+
+// ─── GESTION ERREURS GLOBALE (empêche les crashs) ────────────────────────────
+client.on('error', err => console.error('Erreur client Discord:', err));
+process.on('unhandledRejection', err => console.error('Erreur non gérée:', err));
 
 const commands = [
   new SlashCommandBuilder().setName('profil').setDescription('Affiche ta fiche RH')
@@ -416,13 +355,11 @@ client.on('messageCreate', async (message) => {
   const now = Date.now();
   if (now - (msgCooldowns.get(uid)||0) < 60_000) return;
   msgCooldowns.set(uid, now);
-
   const u = getUser(uid);
   const oldRole = getRoleForXp(u.xp);
   u.xp += Math.floor(Math.random()*26)+15;
   saveXp();
   const newRole = getRoleForXp(u.xp);
-
   if (newRole.level > oldRole.level) {
     const member = await message.guild.members.fetch(uid).catch(()=>null);
     if (member) await handleLevelUp(member, message.channel, u.xp, oldRole, newRole);
@@ -439,13 +376,11 @@ client.on('messageReactionAdd', async (reaction, user) => {
   reactCooldowns.set(user.id, now);
   const guild = reaction.message.guild;
   if (!guild) return;
-
   const u = getUser(user.id);
   const oldRole = getRoleForXp(u.xp);
   u.xp += Math.floor(Math.random()*3)+1;
   saveXp();
   const newRole = getRoleForXp(u.xp);
-
   if (newRole.level > oldRole.level) {
     const member = await guild.members.fetch(user.id).catch(()=>null);
     if (member) await handleLevelUp(member, reaction.message.channel, u.xp, oldRole, newRole);
@@ -457,10 +392,14 @@ client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'profil') {
-    await interaction.deferReply();
+    try {
+      await interaction.deferReply();
+    } catch {
+      return; // interaction expirée, on ignore silencieusement
+    }
     const target = interaction.options.getUser('membre') || interaction.user;
     const member = await interaction.guild.members.fetch(target.id).catch(()=>null);
-    if (!member) return interaction.editReply('Membre introuvable.');
+    if (!member) return interaction.editReply('Membre introuvable.').catch(()=>{});
     const u = getUser(target.id);
     try {
       const img = await drawProfileCard(member, u.xp);
@@ -468,13 +407,13 @@ client.on('interactionCreate', async (interaction) => {
     } catch (err) {
       console.error('Erreur carte profil:', err);
       const role = getRoleForXp(u.xp);
-      await interaction.editReply(`**${member.displayName}** — ${role.emoji} ${role.name} — ${u.xp} XP`);
+      await interaction.editReply(`**${member.displayName}** — ${role.emoji} ${role.name} — ${u.xp} XP`).catch(()=>{});
     }
   }
 
   if (interaction.commandName === 'leaderboard') {
     const sorted = Object.entries(xpData).sort((a,b)=>b[1].xp-a[1].xp).slice(0,10);
-    if (!sorted.length) return interaction.reply("Aucun XP enregistre pour l'instant !");
+    if (!sorted.length) return interaction.reply("Aucun XP enregistre pour l'instant !").catch(()=>{});
     const lines = await Promise.all(sorted.map(async ([id, data], i) => {
       const m = await interaction.guild.members.fetch(id).catch(()=>null);
       const name = m ? m.displayName : 'Inconnu';
@@ -486,7 +425,7 @@ client.on('interactionCreate', async (interaction) => {
       .setTitle('🏆 Classement — Les Irrécupérables')
       .setDescription(lines.join('\n'))
       .setTimestamp();
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] }).catch(()=>{});
   }
 });
 

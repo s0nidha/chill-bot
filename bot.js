@@ -17,10 +17,10 @@ async function downloadFont(url, dest) {
 
 async function loadFonts() {
   const fontPath = path.join('/tmp', 'SpaceMono.ttf');
-  await downloadFont('https://github.com/google/fonts/raw/main/ofl/spacemono/SpaceMono-Regular.ttf', fontPath);
+  await downloadFont('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/spacemono/SpaceMono-Regular.ttf', fontPath);
   GlobalFonts.registerFromPath(fontPath, 'SpaceMono');
   const fontBoldPath = path.join('/tmp', 'SpaceMonoBold.ttf');
-  await downloadFont('https://github.com/google/fonts/raw/main/ofl/spacemono/SpaceMono-Bold.ttf', fontBoldPath);
+  await downloadFont('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/spacemono/SpaceMono-Bold.ttf', fontBoldPath);
   GlobalFonts.registerFromPath(fontBoldPath, 'SpaceMono');
 }
 
@@ -420,10 +420,10 @@ client.on('messageCreate', async (message) => {
   const u = getUser(uid);
   const oldRole = getRoleForXp(u.xp);
   u.xp += Math.floor(Math.random()*26)+15;
-  saveXp(); // ← AJOUT : sauvegarde après chaque gain XP
+  saveXp();
   const newRole = getRoleForXp(u.xp);
 
-  if (newRole.level > oldRole.level) { // ← CORRECTION : comparaison par niveau
+  if (newRole.level > oldRole.level) {
     const member = await message.guild.members.fetch(uid).catch(()=>null);
     if (member) await handleLevelUp(member, message.channel, u.xp, oldRole, newRole);
   }
@@ -443,10 +443,10 @@ client.on('messageReactionAdd', async (reaction, user) => {
   const u = getUser(user.id);
   const oldRole = getRoleForXp(u.xp);
   u.xp += Math.floor(Math.random()*3)+1;
-  saveXp(); // ← AJOUT : sauvegarde après chaque gain XP
+  saveXp();
   const newRole = getRoleForXp(u.xp);
 
-  if (newRole.level > oldRole.level) { // ← CORRECTION : comparaison par niveau
+  if (newRole.level > oldRole.level) {
     const member = await guild.members.fetch(user.id).catch(()=>null);
     if (member) await handleLevelUp(member, reaction.message.channel, u.xp, oldRole, newRole);
   }

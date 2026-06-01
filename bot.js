@@ -34,19 +34,19 @@ const C = { bg: '#522C1F', yellow: '#FFE48C', blue: '#A3CAF5', cream: '#FBF5E9' 
 
 // ─── ROLES ────────────────────────────────────────────────────────────────────
 const ROLES = [
-  { level: 1,  name: 'Stagiaire du Canape',                   emoji: '📦', color: '#4A90D9', xp: 0    },
-  { level: 2,  name: 'Alternant du Chill',                    emoji: '🧃', color: '#57A64A', xp: 200  },
-  { level: 5,  name: 'Observateur Fantome',                   emoji: '📡', color: '#D0D0D0', xp: 600  },
-  { level: 8,  name: 'Place Reservee du Canape',              emoji: '🪑', color: '#964B00', xp: 1100 },
-  { level: 10, name: 'Seigneur du Gaming',                    emoji: '🎮', color: '#9370DB', xp: 1600 },
-  { level: 12, name: 'Ministre des Vocaux',                   emoji: '🎤', color: '#E84040', xp: 2100 },
-  { level: 14, name: 'Responsable Snack',                     emoji: '🍿', color: '#FFD700', xp: 2600 },
-  { level: 16, name: 'Agent du Drama Controle',               emoji: '🚨', color: '#FF8C00', xp: 3200 },
-  { level: 18, name: 'Archiviste des Takes',                  emoji: '📜', color: '#4A90D9', xp: 3800 },
-  { level: 20, name: 'Pompier du Serveur',                    emoji: '🧯', color: '#1A1A1A', xp: 4500 },
-  { level: 22, name: 'Directeur des Memes',                   emoji: '🎭', color: '#57A64A', xp: 5200 },
-  { level: 25, name: 'Conseiller Supreme du Chaos',           emoji: '🧠', color: '#E84040', xp: 6300 },
-  { level: 30, name: 'PDG du Chill',                          emoji: '👑', color: '#FFD700', xp: 8200 },
+  { level: 1,  name: 'Stagiaire du Canape',                   emoji: '📦', color: '#4A90D9', xp: 0     },
+  { level: 2,  name: 'Alternant du Chill',                    emoji: '🧃', color: '#57A64A', xp: 500   },
+  { level: 3,  name: 'Observateur Fantome',                   emoji: '📡', color: '#D0D0D0', xp: 2000  },
+  { level: 4,  name: 'Place Reservee du Canape',              emoji: '🪑', color: '#964B00', xp: 4500  },
+  { level: 5,  name: 'Seigneur du Gaming',                    emoji: '🎮', color: '#9370DB', xp: 7000  },
+  { level: 6,  name: 'Ministre des Vocaux',                   emoji: '🎤', color: '#E84040', xp: 10000 },
+  { level: 7,  name: 'Responsable Snack',                     emoji: '🍿', color: '#FFD700', xp: 13500 },
+  { level: 8,  name: 'Agent du Drama Controle',               emoji: '🚨', color: '#FF8C00', xp: 17500 },
+  { level: 9,  name: 'Archiviste des Takes',                  emoji: '📜', color: '#4A90D9', xp: 22000 },
+  { level: 10, name: 'Pompier du Serveur',                    emoji: '🧯', color: '#1A1A1A', xp: 27000 },
+  { level: 11, name: 'Directeur des Memes',                   emoji: '🎭', color: '#57A64A', xp: 33000 },
+  { level: 12, name: 'Conseiller Supreme du Chaos',           emoji: '🧠', color: '#E84040', xp: 40000 },
+  { level: 13, name: 'PDG du Chill',                          emoji: '👑', color: '#FFD700', xp: 50000 },
 ];
 
 const ROLE_NAMES_FULL = {
@@ -357,7 +357,7 @@ client.on('messageCreate', async (message) => {
   msgCooldowns.set(uid, now);
   const u = getUser(uid);
   const oldRole = getRoleForXp(u.xp);
-  u.xp += Math.floor(Math.random()*26)+15;
+  u.xp += 10;
   saveXp();
   const newRole = getRoleForXp(u.xp);
   if (newRole.level > oldRole.level) {
@@ -378,7 +378,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
   if (!guild) return;
   const u = getUser(user.id);
   const oldRole = getRoleForXp(u.xp);
-  u.xp += Math.floor(Math.random()*3)+1;
+  u.xp += 1;
   saveXp();
   const newRole = getRoleForXp(u.xp);
   if (newRole.level > oldRole.level) {
@@ -395,7 +395,7 @@ client.on('interactionCreate', async (interaction) => {
     try {
       await interaction.deferReply();
     } catch {
-      return; // interaction expirée, on ignore silencieusement
+      return;
     }
     const target = interaction.options.getUser('membre') || interaction.user;
     const member = await interaction.guild.members.fetch(target.id).catch(()=>null);

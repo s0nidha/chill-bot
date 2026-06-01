@@ -85,8 +85,10 @@ function saveXp() {
   fs.writeFileSync(DATA_FILE, JSON.stringify(xpData, null, 2));
 }
 
-const msgCooldowns   = new Map();
-const reactCooldowns = new Map();
+const msgCooldowns    = new Map();
+const reactCooldowns  = new Map();
+const levelupCooldowns = new Map(); // ← verrou anti-doublon level up
+
 function getUser(id) { if (!xpData[id]) xpData[id] = { xp: 0 }; return xpData[id]; }
 
 // ─── CANVAS UTILITAIRES ───────────────────────────────────────────────────────
@@ -300,6 +302,12 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
 
 // ─── LEVEL UP ─────────────────────────────────────────────────────────────────
 async function handleLevelUp(member, channel, totalXp, oldRole, newRole) {
+  // Verrou anti-doublon : clé unique par utilisateur + niveau
+  const key = `${member.id}-${newRole.level}`;
+  if (levelupCooldowns.has(key)) return;
+  levelupCooldowns.set(key, true);
+  setTimeout(() => levelupCooldowns.delete(key), 10_000); // expire après 10 sec
+
   const promo = member.guild.channels.cache.find(c => c.name === LEVELUP_CHANNEL) || channel;
   const discordNew = member.guild.roles.cache.find(r => r.name.includes(newRole.name));
   if (discordNew) await member.roles.add(discordNew).catch(console.error);
@@ -329,7 +337,7 @@ const client = new Client({
   ],
 });
 
-// ─── GESTION ERREURS GLOBALE (empêche les crashs) ────────────────────────────
+// ─── GESTION ERREURS GLOBALE ──────────────────────────────────────────────────
 client.on('error', err => console.error('Erreur client Discord:', err));
 process.on('unhandledRejection', err => console.error('Erreur non gérée:', err));
 

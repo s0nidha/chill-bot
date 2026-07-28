@@ -166,4 +166,4 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 // --- 6. LOG IN ---
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.TOKEN);

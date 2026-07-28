@@ -1,52 +1,52 @@
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
+const { createCanvas } = require('@napi-rs/canvas');
+const mongoose = require('mongoose');
 
-async function downloadFont(url, dest) {
-  return new Promise((resolve, reject) => {
-    if (fs.existsSync(dest)) return resolve();
-    const file = fs.createWriteStream(dest);
-    https.get(url, res => {
-      res.pipe(file);
-      file.on('finish', () => { file.close(); resolve(); });
-    }).on('error', reject);
-  });
-}
-
-async function loadFonts() {
-  const fontPath = path.join('/tmp', 'SpaceMono.ttf');
-  await downloadFont('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/spacemono/SpaceMono-Regular.ttf', fontPath);
-  GlobalFonts.registerFromPath(fontPath, 'SpaceMono');
-  const fontBoldPath = path.join('/tmp', 'SpaceMonoBold.ttf');
-  await downloadFont('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/spacemono/SpaceMono-Bold.ttf', fontBoldPath);
-  GlobalFonts.registerFromPath(fontBoldPath, 'SpaceMono');
-}
-
-// ─── CONFIG ───────────────────────────────────────────────────────────────────
-const TOKEN     = process.env.TOKEN     || 'VOTRE_TOKEN_ICI';
-const CLIENT_ID = process.env.CLIENT_ID || 'VOTRE_CLIENT_ID_ICI';
+// ─── CONFIG & MONGODB ─────────────────────────────────────────────────────────
+const TOKEN     = process.env.TOKEN     || process.env.DISCORD_TOKEN || 'VOTRE_TOKEN_ICI';
+const CLIENT_ID = process.env.CLIENT_ID || '1505261199665922079';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://soniae2z_db_user:w52B9D0Ly9tzKD9b@chill-bot.kppj8ze.mongodb.net/?appName=Chill-Bot';
 const LEVELUP_CHANNEL = '📦・service-des-promotions';
+
+// Connexion MongoDB Atlas
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('✅ Connecté avec succès à MongoDB Atlas !'))
+  .catch(err => console.error('❌ Erreur de connexion MongoDB :', err));
+
+// Schéma MongoDB
+const userSchema = new mongoose.Schema({
+  userId: { type: String, required: true, unique: true },
+  xp: { type: Number, default: 0 }
+});
+const UserXP = mongoose.model('UserXP', userSchema);
+
+// Helper pour récupérer/créer l'XP d'un utilisateur dans la BDD
+async function getUserXP(userId) {
+  let doc = await UserXP.findOne({ userId });
+  if (!doc) {
+    doc = await UserXP.create({ userId, xp: 0 });
+  }
+  return doc;
+}
 
 // ─── COULEURS ─────────────────────────────────────────────────────────────────
 const C = { bg: '#522C1F', yellow: '#FFE48C', blue: '#A3CAF5', cream: '#FBF5E9' };
 
-// ─── ROLES ────────────────────────────────────────────────────────────────────
+// ─── ROLES — seuils XP ronds ──────────────────────────────────────────────────
 const ROLES = [
-  { level: 1,  name: 'Stagiaire du Canape',                   emoji: '📦', color: '#4A90D9', xp: 0     },
-  { level: 2,  name: 'Alternant du Chill',                    emoji: '🧃', color: '#57A64A', xp: 500   },
-  { level: 3,  name: 'Observateur Fantome',                   emoji: '📡', color: '#D0D0D0', xp: 2000  },
-  { level: 4,  name: 'Place Reservee du Canape',              emoji: '🪑', color: '#964B00', xp: 4500  },
-  { level: 5,  name: 'Seigneur du Gaming',                    emoji: '🎮', color: '#9370DB', xp: 7000  },
-  { level: 6,  name: 'Ministre des Vocaux',                   emoji: '🎤', color: '#E84040', xp: 10000 },
-  { level: 7,  name: 'Responsable Snack',                     emoji: '🍿', color: '#FFD700', xp: 13500 },
-  { level: 8,  name: 'Agent du Drama Controle',               emoji: '🚨', color: '#FF8C00', xp: 17500 },
-  { level: 9,  name: 'Archiviste des Takes',                  emoji: '📜', color: '#4A90D9', xp: 22000 },
-  { level: 10, name: 'Pompier du Serveur',                    emoji: '🧯', color: '#1A1A1A', xp: 27000 },
-  { level: 11, name: 'Directeur des Memes',                   emoji: '🎭', color: '#57A64A', xp: 33000 },
-  { level: 12, name: 'Conseiller Supreme du Chaos',           emoji: '🧠', color: '#E84040', xp: 40000 },
-  { level: 13, name: 'PDG du Chill',                          emoji: '👑', color: '#FFD700', xp: 50000 },
+  { level: 1,  name: 'Stagiaire du Canape',               emoji: '📦', color: '#4A90D9', xp: 0    },
+  { level: 2,  name: 'Alternant du Chill',                emoji: '🧃', color: '#57A64A', xp: 200  },
+  { level: 5,  name: 'Observateur Fantome',               emoji: '📡', color: '#D0D0D0', xp: 600  },
+  { level: 8,  name: 'Place Reservee du Canape',          emoji: '🪑', color: '#964B00', xp: 1100 },
+  { level: 10, name: 'Seigneur du Gaming',                emoji: '🎮', color: '#9370DB', xp: 1600 },
+  { level: 12, name: 'Ministre des Vocaux',               emoji: '🎤', color: '#E84040', xp: 2100 },
+  { level: 14, name: 'Responsable Snack',                 emoji: '🍿', color: '#FFD700', xp: 2600 },
+  { level: 16, name: 'Agent du Drama Controle',           emoji: '🚨', color: '#FF8C00', xp: 3200 },
+  { level: 18, name: 'Archiviste des Takes',              emoji: '📜', color: '#4A90D9', xp: 3800 },
+  { level: 20, name: 'Pompier du Serveur',                emoji: '🧯', color: '#1A1A1A', xp: 4500 },
+  { level: 22, name: 'Directeur des Memes',               emoji: '🎭', color: '#57A64A', xp: 5200 },
+  { level: 25, name: 'Conseiller Supreme du Chaos',       emoji: '🧠', color: '#E84040', xp: 6300 },
+  { level: 30, name: 'PDG du Chill',                      emoji: '👑', color: '#FFD700', xp: 8200 },
 ];
 
 const ROLE_NAMES_FULL = {
@@ -75,21 +75,9 @@ function getNextRole(xp) {
   return null;
 }
 
-// ─── XP DATA + SAUVEGARDE JSON ────────────────────────────────────────────────
-const DATA_FILE = './xpData.json';
-const xpData = fs.existsSync(DATA_FILE)
-  ? JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'))
-  : {};
-
-function saveXp() {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(xpData, null, 2));
-}
-
-const msgCooldowns    = new Map();
-const reactCooldowns  = new Map();
-const levelupCooldowns = new Map(); // ← verrou anti-doublon level up
-
-function getUser(id) { if (!xpData[id]) xpData[id] = { xp: 0 }; return xpData[id]; }
+// ─── COOLDOWNS ────────────────────────────────────────────────────────────────
+const msgCooldowns   = new Map();
+const reactCooldowns = new Map();
 
 // ─── CANVAS UTILITAIRES ───────────────────────────────────────────────────────
 function roundRect(ctx, x, y, w, h, r) {
@@ -114,12 +102,12 @@ function drawBadge(ctx, x, y, l1, l2) {
   fillRR(ctx, x, y, 130, 44, 4, C.blue);
   ctx.save(); ctx.strokeStyle = C.cream; ctx.lineWidth = 2;
   roundRect(ctx, x, y, 130, 44, 4); ctx.stroke();
-  ctx.fillStyle = C.bg; ctx.font = 'bold 11px SpaceMono'; ctx.textAlign = 'center';
+  ctx.fillStyle = C.bg; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
   ctx.fillText(l1, x+65, y+16); ctx.fillText(l2, x+65, y+32);
   ctx.restore();
 }
 function drawStamp(ctx, x, y, text) {
-  ctx.save(); ctx.font = 'bold 11px SpaceMono';
+  ctx.save(); ctx.font = 'bold 11px monospace';
   const tw = ctx.measureText(text).width + 24;
   ctx.strokeStyle = C.yellow; ctx.lineWidth = 1.5;
   roundRect(ctx, x-tw, y, tw, 28, 4); ctx.stroke();
@@ -144,14 +132,17 @@ function drawBar(ctx, x, y, w, h, pct) {
 function drawSectionLbl(ctx, x, y, text) {
   ctx.save();
   fillRR(ctx, x, y-8, 10, 10, 2, 'rgba(163,202,245,0.5)');
-  ctx.fillStyle = C.blue; ctx.globalAlpha=0.8; ctx.font='10px SpaceMono';
+  ctx.fillStyle = C.blue; ctx.globalAlpha=0.8; ctx.font='10px monospace';
   ctx.fillText(text, x+18, y); ctx.restore();
 }
 function drawDot(ctx, role, cx, cy, size) {
   ctx.save();
-  ctx.fillStyle = role.color; ctx.globalAlpha = 1;
-  ctx.beginPath(); ctx.arc(cx, cy, size/2, 0, Math.PI*2);
-  ctx.fill(); ctx.restore();
+  ctx.fillStyle = role.color;
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, size/2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
 }
 function short(name) { return name.length > 16 ? name.substring(0,15)+'...' : name; }
 
@@ -160,64 +151,91 @@ async function drawProfileCard(member, xp) {
   const W=560, H=420, pad=20;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
+
   fillRR(ctx, 0, 0, W, H, 10, C.bg);
+
+  // Header
   ctx.fillStyle = C.yellow; ctx.fillRect(0, 0, W, 48);
-  ctx.fillStyle = C.bg; ctx.font = 'bold 11px SpaceMono'; ctx.textAlign='left';
+  ctx.fillStyle = C.bg; ctx.font = 'bold 11px monospace'; ctx.textAlign='left';
   ctx.fillText('>>>  DOSSIER RH OFFICIEL  —  LES IRRECUPERABLES', pad, 30);
-  ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px SpaceMono'; ctx.textAlign='right';
+  ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px monospace'; ctx.textAlign='right';
   ctx.fillText('Ref. EMP-'+String(xp).padStart(4,'0'), W-pad, 30); ctx.restore();
-  const role = getRoleForXp(xp);
+
+  const role     = getRoleForXp(xp);
   const nextRole = getNextRole(xp);
-  const xpCur = Math.max(0, xp - role.xp);
-  const xpNxt = nextRole ? nextRole.xp - role.xp : 1;
-  const pct = nextRole ? xpCur / xpNxt : 1;
+  const xpCur    = Math.max(0, xp - role.xp);
+  const xpNxt    = nextRole ? nextRole.xp - role.xp : 1;
+  const pct      = nextRole ? xpCur / xpNxt : 1;
+
+  // Avatar
   fillRR(ctx, pad, 68, 56, 56, 8, C.blue);
   ctx.save(); ctx.strokeStyle=C.yellow; ctx.lineWidth=2;
   roundRect(ctx, pad, 68, 56, 56, 8); ctx.stroke();
-  ctx.fillStyle=C.bg; ctx.font='bold 22px SpaceMono'; ctx.textAlign='center';
+  ctx.fillStyle=C.bg; ctx.font='bold 22px monospace'; ctx.textAlign='center';
   ctx.fillText(member.displayName[0].toUpperCase(), pad+28, 104); ctx.restore();
-  ctx.fillStyle=C.cream; ctx.font='bold 20px SpaceMono'; ctx.textAlign='left';
+
+  // Nom + rôle
+  ctx.fillStyle=C.cream; ctx.font='bold 20px monospace'; ctx.textAlign='left';
   ctx.fillText(member.displayName, pad+70, 90);
   drawDot(ctx, role, pad+76, 107, 10);
-  ctx.fillStyle=C.yellow; ctx.font='bold 12px SpaceMono';
+  ctx.fillStyle=C.yellow; ctx.font='bold 12px monospace';
   ctx.fillText(role.name, pad+86, 111);
+
   drawBadge(ctx, W-pad-130, 68, 'FICHE', 'EMPLOYE');
   drawDash(ctx, pad, 140, W-pad);
   drawSectionLbl(ctx, pad, 165, 'BILAN DE CARRIERE');
+
+  // Stats
   const sbW = (W-pad*2-20)/3;
   const sbY=175, sbH=90;
+
+  // Échelon
   drawStatBox(ctx, pad, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px monospace'; ctx.textAlign='center';
   ctx.fillText('ECHELON', pad+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px monospace';
   ctx.fillText(String(role.level), pad+sbW/2, sbY+50);
-  ctx.globalAlpha=0.5; ctx.fillStyle=C.cream; ctx.font='10px SpaceMono';
+  ctx.globalAlpha=0.5; ctx.fillStyle=C.cream; ctx.font='10px monospace';
   const rlw = ctx.measureText(role.name).width;
   drawDot(ctx, role, pad+sbW/2 - rlw/2 - 8, sbY+68, 7);
   ctx.textAlign='left';
-  ctx.fillText(role.name, pad+sbW/2 - rlw/2 + 2, sbY+72); ctx.restore();
+  ctx.fillText(role.name, pad+sbW/2 - rlw/2 + 2, sbY+72);
+  ctx.restore();
+
+  // XP Total
   drawStatBox(ctx, pad+sbW+10, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px monospace'; ctx.textAlign='center';
   ctx.fillText('XP TOTAL', pad+sbW+10+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
-  ctx.fillText(xp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50); ctx.restore();
-  const allXp = Object.entries(xpData).sort((a,b)=>b[1].xp-a[1].xp);
-  const rank = allXp.findIndex(([id])=>id===member.id)+1;
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px monospace';
+  ctx.fillText(xp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50);
+  ctx.restore();
+
+  // Classement direct depuis MongoDB
+  const allUsers = await UserXP.find().sort({ xp: -1 });
+  const rank = allUsers.findIndex(u => u.userId === member.id) + 1;
+
   drawStatBox(ctx, pad+(sbW+10)*2, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px monospace'; ctx.textAlign='center';
   ctx.fillText('CLASSEMENT', pad+(sbW+10)*2+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
-  ctx.fillText('#'+(rank||1), pad+(sbW+10)*2+sbW/2, sbY+50); ctx.restore();
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px monospace';
+  ctx.fillText('#'+(rank||1), pad+(sbW+10)*2+sbW/2, sbY+50);
+  ctx.restore();
+
+  // Barre
   const barY=278;
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px SpaceMono'; ctx.textAlign='left';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px monospace'; ctx.textAlign='left';
   ctx.fillText('Progression vers '+(nextRole?nextRole.name:'niveau max'), pad, barY);
   ctx.textAlign='right';
-  ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY); ctx.restore();
+  ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY);
+  ctx.restore();
   drawBar(ctx, pad, barY+8, W-pad*2, 6, pct);
+
+  // Footer
   drawLine(ctx, pad, H-52, W-pad);
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px SpaceMono'; ctx.textAlign='left';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px monospace'; ctx.textAlign='left';
   ctx.fillText('SIEGE SOCIAL DU CANAPE  —  SERVICE RH FICTIF', pad, H-26); ctx.restore();
   drawStamp(ctx, W-pad, H-36, 'EMPLOYE');
+
   return canvas.toBuffer('image/png');
 }
 
@@ -226,95 +244,124 @@ async function drawLevelUpCard(member, totalXp, oldRole, newRole) {
   const W=560, H=500, pad=20;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
+
   fillRR(ctx, 0, 0, W, H, 10, C.bg);
+
+  // Header
   ctx.fillStyle=C.yellow; ctx.fillRect(0, 0, W, 48);
-  ctx.fillStyle=C.bg; ctx.font='bold 11px SpaceMono'; ctx.textAlign='left';
+  ctx.fillStyle=C.bg; ctx.font='bold 11px monospace'; ctx.textAlign='left';
   ctx.fillText('***  PROMOTION OFFICIELLE  —  LES IRRECUPERABLES', pad, 30);
-  ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px SpaceMono'; ctx.textAlign='right';
+  ctx.save(); ctx.globalAlpha=0.6; ctx.font='10px monospace'; ctx.textAlign='right';
   ctx.fillText('Ref. PROMO-'+String(newRole.level).padStart(4,'0'), W-pad, 30); ctx.restore();
+
+  // Avatar
   fillRR(ctx, pad, 68, 56, 56, 8, C.blue);
   ctx.save(); ctx.strokeStyle=C.yellow; ctx.lineWidth=2;
   roundRect(ctx, pad, 68, 56, 56, 8); ctx.stroke();
-  ctx.fillStyle=C.bg; ctx.font='bold 22px SpaceMono'; ctx.textAlign='center';
+  ctx.fillStyle=C.bg; ctx.font='bold 22px monospace'; ctx.textAlign='center';
   ctx.fillText(member.displayName[0].toUpperCase(), pad+28, 104); ctx.restore();
-  ctx.fillStyle=C.cream; ctx.font='bold 20px SpaceMono'; ctx.textAlign='left';
+
+  // Nom
+  ctx.fillStyle=C.cream; ctx.font='bold 20px monospace'; ctx.textAlign='left';
   ctx.fillText(member.displayName, pad+70, 88);
+
   drawBadge(ctx, W-pad-130, 68, 'DOSSIER', 'RH OFFICIEL');
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.75; ctx.font='12px SpaceMono'; ctx.textAlign='left';
+
+  // Description
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.75; ctx.font='12px monospace'; ctx.textAlign='left';
   ctx.fillText('Le Canape enregistre ton evolution...', pad+70, 108);
   ctx.fillText("Tu atteins l'echelon ", pad+70, 124);
   const p1 = ctx.measureText("Tu atteins l'echelon ").width; ctx.restore();
-  ctx.fillStyle=C.yellow; ctx.font='bold 12px SpaceMono';
+  ctx.fillStyle=C.yellow; ctx.font='bold 12px monospace';
   ctx.fillText(String(newRole.level), pad+70+p1, 124);
   const p2 = ctx.measureText(String(newRole.level)).width;
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.75; ctx.font='12px SpaceMono';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.75; ctx.font='12px monospace';
   ctx.fillText(' — ', pad+70+p1+p2, 124);
   const p3 = ctx.measureText(' — ').width; ctx.restore();
   drawDot(ctx, newRole, pad+70+p1+p2+p3+6, 120, 9);
-  ctx.fillStyle=C.blue; ctx.font='bold 12px SpaceMono';
+  ctx.fillStyle=C.blue; ctx.font='bold 12px monospace';
   ctx.fillText(short(newRole.name), pad+70+p1+p2+p3+14, 124);
+
   drawDash(ctx, pad, 148, W-pad);
+
+  // Box changement
   ctx.save(); ctx.fillStyle='rgba(163,202,245,0.08)'; ctx.strokeStyle='rgba(163,202,245,0.25)'; ctx.lineWidth=0.5;
   roundRect(ctx, pad, 158, W-pad*2, 115, 8); ctx.fill(); ctx.stroke(); ctx.restore();
   drawSectionLbl(ctx, pad+14, 180, 'CHANGEMENT DE GRADE OFFICIEL');
+
   const midX = W/2;
+
+  // Ancien rôle
   ctx.save(); ctx.globalAlpha=0.5;
   drawDot(ctx, oldRole, midX-90, 208, 18);
-  ctx.fillStyle=C.cream; ctx.font='12px SpaceMono'; ctx.textAlign='center';
+  ctx.fillStyle=C.cream; ctx.font='12px monospace'; ctx.textAlign='center';
   ctx.fillText(short(oldRole.name), midX-90, 244);
   const ow = ctx.measureText(short(oldRole.name)).width;
   ctx.strokeStyle=C.cream; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(midX-90-ow/2,240); ctx.lineTo(midX-90+ow/2,240); ctx.stroke(); ctx.restore();
-  ctx.fillStyle=C.blue; ctx.font='20px SpaceMonoBold'; ctx.textAlign='center';
+  ctx.beginPath(); ctx.moveTo(midX-90-ow/2,240); ctx.lineTo(midX-90+ow/2,240); ctx.stroke();
+  ctx.restore();
+
+  // Flèche
+  ctx.fillStyle=C.blue; ctx.font='20px monospace'; ctx.textAlign='center';
   ctx.fillText('->', midX-10, 228);
+
+  // Nouveau rôle
   drawDot(ctx, newRole, midX+80, 208, 22);
-  ctx.fillStyle=C.yellow; ctx.font='bold 13px SpaceMono'; ctx.textAlign='center';
+  ctx.fillStyle=C.yellow; ctx.font='bold 13px monospace'; ctx.textAlign='center';
   ctx.fillText(short(newRole.name), midX+80, 244);
+
+  // Stats
   const sbW=(W-pad*2-10)/2, sbY=290, sbH=80;
+
   drawStatBox(ctx, pad, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px monospace'; ctx.textAlign='center';
   ctx.fillText('NOUVEL ECHELON', pad+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px monospace';
   ctx.fillText(String(newRole.level), pad+sbW/2, sbY+48);
   ctx.globalAlpha=0.5; ctx.fillStyle=C.cream; ctx.font='8px monospace';
   drawDot(ctx, newRole, pad+sbW/2-26, sbY+64, 7);
-  ctx.fillText(short(newRole.name), pad+sbW/2+2, sbY+68); ctx.restore();
+  ctx.fillText(short(newRole.name), pad+sbW/2+2, sbY+68);
+  ctx.restore();
+
   drawStatBox(ctx, pad+sbW+10, sbY, sbW, sbH);
-  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px SpaceMono'; ctx.textAlign='center';
+  ctx.save(); ctx.fillStyle=C.blue; ctx.globalAlpha=0.8; ctx.font='9px monospace'; ctx.textAlign='center';
   ctx.fillText('XP TOTAL', pad+sbW+10+sbW/2, sbY+18); ctx.globalAlpha=1;
-  ctx.fillStyle=C.yellow; ctx.font='bold 26px SpaceMono';
-  ctx.fillText(totalXp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50); ctx.restore();
+  ctx.fillStyle=C.yellow; ctx.font='bold 26px monospace';
+  ctx.fillText(totalXp.toLocaleString('fr-FR'), pad+sbW+10+sbW/2, sbY+50);
+  ctx.restore();
+
+  // Barre
   const nextRole = getNextRole(totalXp);
   const xpCur = Math.max(0, totalXp - newRole.xp);
   const xpNxt = nextRole ? nextRole.xp - newRole.xp : 1;
   const barY = 392;
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px SpaceMono'; ctx.textAlign='left';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.6; ctx.font='11px monospace'; ctx.textAlign='left';
   ctx.fillText('Progression vers '+(nextRole?nextRole.name:'niveau max'), pad, barY);
   ctx.textAlign='right';
-  ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY); ctx.restore();
+  ctx.fillText(nextRole?xpCur.toLocaleString('fr-FR')+' / '+xpNxt.toLocaleString('fr-FR')+' XP':'MAX', W-pad, barY);
+  ctx.restore();
   drawBar(ctx, pad, barY+8, W-pad*2, 6, nextRole ? xpCur/xpNxt : 1);
+
+  // Footer
   drawLine(ctx, pad, H-52, W-pad);
-  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px SpaceMono'; ctx.textAlign='left';
+  ctx.save(); ctx.fillStyle=C.cream; ctx.globalAlpha=0.35; ctx.font='9px monospace'; ctx.textAlign='left';
   ctx.fillText('SIEGE SOCIAL DU CANAPE  —  SERVICE RH FICTIF', pad, H-26); ctx.restore();
   drawStamp(ctx, W-pad, H-36, 'PROMU');
+
   return canvas.toBuffer('image/png');
 }
 
 // ─── LEVEL UP ─────────────────────────────────────────────────────────────────
 async function handleLevelUp(member, channel, totalXp, oldRole, newRole) {
-  // Verrou anti-doublon : clé unique par utilisateur + niveau
-  const key = `${member.id}-${newRole.level}`;
-  if (levelupCooldowns.has(key)) return;
-  levelupCooldowns.set(key, true);
-  setTimeout(() => levelupCooldowns.delete(key), 10_000); // expire après 10 sec
-
   const promo = member.guild.channels.cache.find(c => c.name === LEVELUP_CHANNEL) || channel;
+
   const discordNew = member.guild.roles.cache.find(r => r.name.includes(newRole.name));
   if (discordNew) await member.roles.add(discordNew).catch(console.error);
   if (oldRole.name !== newRole.name) {
     const discordOld = member.guild.roles.cache.find(r => r.name.includes(oldRole.name));
     if (discordOld) await member.roles.remove(discordOld).catch(console.error);
   }
+
   try {
     const img = await drawLevelUpCard(member, totalXp, oldRole, newRole);
     await promo.send({ files: [new AttachmentBuilder(img, { name: 'levelup.png' })] });
@@ -336,10 +383,6 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
   ],
 });
-
-// ─── GESTION ERREURS GLOBALE ──────────────────────────────────────────────────
-client.on('error', err => console.error('Erreur client Discord:', err));
-process.on('unhandledRejection', err => console.error('Erreur non gérée:', err));
 
 const commands = [
   new SlashCommandBuilder().setName('profil').setDescription('Affiche ta fiche RH')
@@ -363,12 +406,18 @@ client.on('messageCreate', async (message) => {
   const now = Date.now();
   if (now - (msgCooldowns.get(uid)||0) < 60_000) return;
   msgCooldowns.set(uid, now);
-  const u = getUser(uid);
+
+  const u = await getUserXP(uid);
   const oldRole = getRoleForXp(u.xp);
-  u.xp += 10;
-  saveXp();
+  
+  // Gain d'XP + Sauvegarde MongoDB
+  const xpAdded = Math.floor(Math.random()*26)+15;
+  u.xp += xpAdded;
+  await u.save();
+
   const newRole = getRoleForXp(u.xp);
-  if (newRole.level > oldRole.level) {
+
+  if (newRole.xp > oldRole.xp) {
     const member = await message.guild.members.fetch(uid).catch(()=>null);
     if (member) await handleLevelUp(member, message.channel, u.xp, oldRole, newRole);
   }
@@ -384,12 +433,17 @@ client.on('messageReactionAdd', async (reaction, user) => {
   reactCooldowns.set(user.id, now);
   const guild = reaction.message.guild;
   if (!guild) return;
-  const u = getUser(user.id);
+
+  const u = await getUserXP(user.id);
   const oldRole = getRoleForXp(u.xp);
-  u.xp += 1;
-  saveXp();
+
+  // Gain d'XP + Sauvegarde MongoDB
+  u.xp += Math.floor(Math.random()*3)+1;
+  await u.save();
+
   const newRole = getRoleForXp(u.xp);
-  if (newRole.level > oldRole.level) {
+
+  if (newRole.xp > oldRole.xp) {
     const member = await guild.members.fetch(user.id).catch(()=>null);
     if (member) await handleLevelUp(member, reaction.message.channel, u.xp, oldRole, newRole);
   }
@@ -400,47 +454,41 @@ client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'profil') {
-    try {
-      await interaction.deferReply();
-    } catch {
-      return;
-    }
+    await interaction.deferReply();
     const target = interaction.options.getUser('membre') || interaction.user;
     const member = await interaction.guild.members.fetch(target.id).catch(()=>null);
-    if (!member) return interaction.editReply('Membre introuvable.').catch(()=>{});
-    const u = getUser(target.id);
+    if (!member) return interaction.editReply('Membre introuvable.');
+
+    const u = await getUserXP(target.id);
     try {
       const img = await drawProfileCard(member, u.xp);
       await interaction.editReply({ files: [new AttachmentBuilder(img, { name: 'profil.png' })] });
     } catch (err) {
       console.error('Erreur carte profil:', err);
       const role = getRoleForXp(u.xp);
-      await interaction.editReply(`**${member.displayName}** — ${role.emoji} ${role.name} — ${u.xp} XP`).catch(()=>{});
+      await interaction.editReply(`**${member.displayName}** — ${role.emoji} ${role.name} — ${u.xp} XP`);
     }
   }
 
   if (interaction.commandName === 'leaderboard') {
-    const sorted = Object.entries(xpData).sort((a,b)=>b[1].xp-a[1].xp).slice(0,10);
-    if (!sorted.length) return interaction.reply("Aucun XP enregistre pour l'instant !").catch(()=>{});
-    const lines = await Promise.all(sorted.map(async ([id, data], i) => {
-      const m = await interaction.guild.members.fetch(id).catch(()=>null);
+    const topUsers = await UserXP.find().sort({ xp: -1 }).limit(10);
+    if (!topUsers.length) return interaction.reply("Aucun XP enregistre pour l'instant !");
+
+    const lines = await Promise.all(topUsers.map(async (data, i) => {
+      const m = await interaction.guild.members.fetch(data.userId).catch(()=>null);
       const name = m ? m.displayName : 'Inconnu';
       const role = getRoleForXp(data.xp);
       return `**#${i+1}** ${name} — ${role.emoji} ${role.name} — ${data.xp} XP`;
     }));
+
     const embed = new EmbedBuilder()
       .setColor(0xFFE48C)
       .setTitle('🏆 Classement — Les Irrécupérables')
       .setDescription(lines.join('\n'))
       .setTimestamp();
-    await interaction.reply({ embeds: [embed] }).catch(()=>{});
+
+    await interaction.reply({ embeds: [embed] });
   }
 });
 
-loadFonts().then(() => {
-  console.log('✅ Polices chargées.');
-  client.login(TOKEN);
-}).catch(err => {
-  console.error('Erreur chargement polices:', err);
-  client.login(TOKEN);
-});
+client.login(TOKEN);
